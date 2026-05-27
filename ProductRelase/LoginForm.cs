@@ -51,16 +51,19 @@ namespace ProductRelase
                 if (fileDialog.ShowDialog() == DialogResult.OK)
                 {
                     path = fileDialog.FileName;
-                    MessageBox.Show($"Выбран файл: {path}");
+                    MessageBox.Show($"Выбран файл: {path}", "Файл выбран",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
-                    MessageBox.Show("Выбран не файл");
+                    MessageBox.Show("Файл выбран", "Файл не выбран",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибка при выборе файла базы данных");
+                MessageBox.Show($"Ошибка при выборе файла базы данных: {ex.Message}",
+                    "Ошибка при выборе файла", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
             return path;
