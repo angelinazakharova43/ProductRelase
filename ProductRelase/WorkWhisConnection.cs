@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.Data.OleDb;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Security.Cryptography;
 
 namespace ProductRelase
 {
-    internal class WorkWhisDatabase
+    internal class WorkWhisConnection
     {
         public string Path;
         private string connStr;
         OleDbConnection conn;
-        public WorkWhisDatabase(string path)
+        public WorkWhisConnection(string path)
         {
             Path = path;
         }
@@ -25,7 +26,8 @@ namespace ProductRelase
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка во время установления соединения: {ex.Message}");
+                MessageBox.Show($"Ошибка во время установления соединения: {ex.Message}",
+                    "Ошибка во время установления соединения", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -39,7 +41,8 @@ namespace ProductRelase
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при открытии соединения: {ex.Message}");
+                MessageBox.Show($"Ошибка при открытии соединения: {ex.Message}", "Ошибка открытия соединения",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

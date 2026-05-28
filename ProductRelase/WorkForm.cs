@@ -11,49 +11,45 @@ namespace ProductRelase
 {
     public partial class WorkForm : Form
     {
-        private LoginForm loginForm;
-
+        private bool IsCon;
+        private string path;
+        AutForm autForm;
         /// <summary>
         /// Создание новой рабочей формы
         /// </summary>
-        /// <param name="LF">Форма запуска</param>
-        public WorkForm(LoginForm LF)
+        public WorkForm()
         {
+            IsCon = false;
             InitializeComponent();
-            NotInLog();
-            loginForm = LF;
         }
 
         /// <summary>
-        /// Отрисовка страниц, если не совершён вход в учётную запись
+        /// Переход к форме входа
         /// </summary>
-        private void NotInLog()
+        public void NewLogin()
         {
-            logPage.Parent = tabCon;
+            this.Hide();
+            autForm = new AutForm(this);
+            autForm.ShowDialog();
 
-            tablePage.Parent = null;
-            findPage.Parent = null;
-            addLinePage.Parent = null;
-            editPage.Parent = null;
-            reportPage.Parent = null;
-
-            btnLogChange.Visible = false;
-        }
-
-        /// <summary>
-        /// Отрисовка страниц, если совершён вход в учётную запись
-        /// </summary>
-        private void InLog()
-        {
-            logPage.Parent = null;
-
-            tablePage.Parent = tabCon;
-            findPage.Parent = tabCon;
-            addLinePage.Parent = tabCon;
-            editPage.Parent = tabCon;
-            reportPage.Parent = tabCon;
-
-            btnLogChange.Visible = true;
+            if (autForm != null && autForm.IsLogin())
+            {
+                lstBoxTables.Enabled = true;
+                btnFindLine.Enabled = true;
+                btnAddLine.Enabled = true;
+                btnChangeLine.Enabled = true;
+                btnDeleteLine.Enabled = true;
+                btnCreateReport.Enabled = true;
+            }
+            else
+            {
+                lstBoxTables.Enabled = false;
+                btnFindLine.Enabled = false;
+                btnAddLine.Enabled = false;
+                btnChangeLine.Enabled = false;
+                btnDeleteLine.Enabled = false;
+                btnCreateReport.Enabled = false;
+            }
         }
 
         /// <summary>
@@ -67,16 +63,6 @@ namespace ProductRelase
         }
 
         /// <summary>
-        /// Вход в учётную запись
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void btnOpen_Click(object sender, EventArgs e)
-        {
-            InLog();
-        }
-
-        /// <summary>
         /// Смена учётной записи
         /// </summary>
         /// <param name="sender"></param>
@@ -86,7 +72,7 @@ namespace ProductRelase
             DialogResult result = MessageBox.Show("Вы точно хотите выйти из учётной записи?",
                 "Выход из учётной записи", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
-                NotInLog();
+                NewLogin();
         }
 
         /// <summary>
@@ -98,10 +84,64 @@ namespace ProductRelase
         {
             DialogResult result = MessageBox.Show("Вы точно хотите закрыть приложение?",
                 "Закрытие приложения", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            if (result == DialogResult.Yes)
-                loginForm.Close();
-            else
+            if (result != DialogResult.Yes)
                 e.Cancel = true;
+        }
+
+        /// <summary>
+        /// Получение пути к файлу с базой даннных
+        /// </summary>
+        /// <returns></returns>
+        private string ConnPath()
+        {
+            path = null;
+            OpenFileDialog fileDialog = new OpenFileDialog();
+            try
+            {
+                fileDialog.InitialDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                fileDialog.Filter = "Access Database (*.accdb)|*.accdb";
+                fileDialog.FilterIndex = 1;
+
+                if (fileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    path = fileDialog.FileName;
+                    MessageBox.Show($"Выбран файл: {path}", "Файл выбран",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show("Файл выбран", "Файл не выбран",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при выборе файла базы данных: {ex.Message}",
+                    "Ошибка при выборе файла", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            return path;
+        }
+
+        private void tabCon_Click(object sender, EventArgs e)
+        {
+            path = ConnPath();
+            if (path != null)
+            {
+                btnLogChange.Visible = true;
+                NewLogin();
+            }
+            else
+            {
+                btnLogChange.Visible = false;
+
+                lstBoxTables.Enabled = false;
+                btnFindLine.Enabled = false;
+                btnAddLine.Enabled = false;
+                btnChangeLine.Enabled = false;
+                btnDeleteLine.Enabled = false;
+                btnCreateReport.Enabled = false;
+            }
         }
     }
 }
