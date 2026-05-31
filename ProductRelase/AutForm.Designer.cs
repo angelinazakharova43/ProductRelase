@@ -33,7 +33,7 @@
             txtBoxLogin = new TextBox();
             txtBoxPassword = new TextBox();
             btnLogin = new Button();
-            button1 = new Button();
+            btnReg = new Button();
             lblGoLogin = new Label();
             SuspendLayout();
             // 
@@ -79,14 +79,15 @@
             btnLogin.UseVisualStyleBackColor = true;
             btnLogin.Click += btnLogin_Click;
             // 
-            // button1
+            // btnReg
             // 
-            button1.Location = new Point(148, 148);
-            button1.Name = "button1";
-            button1.Size = new Size(131, 26);
-            button1.TabIndex = 6;
-            button1.Text = "Регистрация";
-            button1.UseVisualStyleBackColor = true;
+            btnReg.Location = new Point(148, 148);
+            btnReg.Name = "btnReg";
+            btnReg.Size = new Size(131, 26);
+            btnReg.TabIndex = 6;
+            btnReg.Text = "Регистрация";
+            btnReg.UseVisualStyleBackColor = true;
+            btnReg.Click += btnReg_Click;
             // 
             // lblGoLogin
             // 
@@ -104,7 +105,7 @@
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(466, 202);
             Controls.Add(lblGoLogin);
-            Controls.Add(button1);
+            Controls.Add(btnReg);
             Controls.Add(btnLogin);
             Controls.Add(txtBoxPassword);
             Controls.Add(txtBoxLogin);
@@ -125,7 +126,7 @@
         private TextBox txtBoxLogin;
         private TextBox txtBoxPassword;
         private Button btnLogin;
-        private Button button1;
+        private Button btnReg;
         private Label lblGoLogin;
     }
 }

@@ -39,5 +39,11 @@ namespace ProductRelase
         {
             return IsLog;
         }
+
+        private void btnReg_Click(object sender, EventArgs e)
+        {
+            RegistrationForm registrationForm = new RegistrationForm();
+            registrationForm.ShowDialog();
+        }
     }
 }

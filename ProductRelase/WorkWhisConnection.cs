@@ -12,12 +12,20 @@ namespace ProductRelase
         public string Path;
         private string connStr;
         OleDbConnection conn;
+
+        /// <summary>
+        /// Объект для работы с БД
+        /// </summary>
+        /// <param name="path">Путь к БД</param>
         public WorkWhisConnection(string path)
         {
             Path = path;
         }
 
-        public void GetConnect()
+        /// <summary>
+        /// Установка соединения
+        /// </summary>
+        private void GetConnect()
         {
             try
             {
@@ -31,6 +39,9 @@ namespace ProductRelase
             }
         }
 
+        /// <summary>
+        /// Открытие соединения
+        /// </summary>
         public void OpenConnect()
         {
             if (conn == null)
@@ -46,10 +57,18 @@ namespace ProductRelase
             }
         }
 
+        /// <summary>
+        /// Закрытие соединения
+        /// </summary>
         public void CloseConnect()
         {
             if (conn.State == System.Data.ConnectionState.Open)
                 conn.Close();
+        }
+
+        public void NewUser(string userLogin, string userPassword, string userRole)
+        {
+
         }
     }
 }

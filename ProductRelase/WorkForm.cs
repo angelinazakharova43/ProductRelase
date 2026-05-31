@@ -34,22 +34,22 @@ namespace ProductRelase
 
             if (autForm != null && autForm.IsLogin())
             {
-                lstBoxTables.Enabled = true;
-                btnFindLine.Enabled = true;
-                btnAddLine.Enabled = true;
-                btnChangeLine.Enabled = true;
-                btnDeleteLine.Enabled = true;
-                btnCreateReport.Enabled = true;
+                IsEnabled(true);
             }
             else
             {
-                lstBoxTables.Enabled = false;
-                btnFindLine.Enabled = false;
-                btnAddLine.Enabled = false;
-                btnChangeLine.Enabled = false;
-                btnDeleteLine.Enabled = false;
-                btnCreateReport.Enabled = false;
+                IsEnabled(false);
             }
+        }
+
+        private void IsEnabled(bool en)
+        {
+            lstBoxTables.Enabled = en;
+            btnFindLine.Enabled = en;
+            btnAddLine.Enabled = en;
+            btnChangeLine.Enabled = en;
+            btnDeleteLine.Enabled = en;
+            btnCreateReport.Enabled = en;
         }
 
         /// <summary>
@@ -135,12 +135,7 @@ namespace ProductRelase
             {
                 btnLogChange.Visible = false;
 
-                lstBoxTables.Enabled = false;
-                btnFindLine.Enabled = false;
-                btnAddLine.Enabled = false;
-                btnChangeLine.Enabled = false;
-                btnDeleteLine.Enabled = false;
-                btnCreateReport.Enabled = false;
+                IsEnabled(false);
             }
         }
     }
