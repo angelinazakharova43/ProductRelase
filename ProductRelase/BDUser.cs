@@ -10,29 +10,26 @@ namespace ProductRelase
         private string LogText;
         private string PassWord;
         private string Role;
+        private WorkWhisConnection Conn;
 
         /// <summary>
         /// Пользователь
         /// </summary>
-        /// <param name="logText">Логин (для регистрации)</param>
-        /// <param name="passWord">Пароль (для регистрации)</param>
-        /// <param name="role">Роль (для проверки разрешений)</param>
+        /// <param name="logText">Логин (для регистрации/входа)</param>
+        /// <param name="passWord">Пароль (для регистрации/входа)</param>
         /// <exception cref="Exception"> Неверный логин или пароль</exception>
-        public BDUser(string logText, string passWord, string role)
+        public BDUser(string logText, string passWord)
         {
             string str;
             if (CheckLogin(logText, out str) && CheckPassword(passWord, out str))
             {
                 LogText = logText;
                 PassWord = passWord;
-                Role = role;
             }
             else
             {
                 throw new Exception(str);
             }
-
-            Role = role;
         }
 
         /// <summary>
@@ -79,6 +76,34 @@ namespace ProductRelase
             }
             text = "";
             return true;
+        }
+
+        private void TakeRole()
+        {
+            Role = Conn.GiveRole(LogText);
+        }
+
+        public int CheckRole()
+        {
+            switch (Role)
+            {
+                case "админ":
+                    return 0;
+                case "пользователь1":
+                    return 1;
+                case "пользователь2":
+                    return 2;
+                case "пользователь3":
+                    return 3;
+                case "пользователь4":
+                    return 4;
+                case "пользователь5":
+                    return 5;
+                case "пользователь6":
+                    return 6;
+                default:
+                    return -1;
+            }
         }
     }
 }

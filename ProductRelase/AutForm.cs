@@ -12,19 +12,63 @@ namespace ProductRelase
     {
         private WorkForm workForm;
         private bool IsLog;
+        private WorkWhisConnection wwConn; 
+
+        /// <summary>
+        /// Форма для входа в систему
+        /// </summary>
+        /// <param name="WF">Рабочая форма</param>
         public AutForm(WorkForm WF)
         {
             IsLog = false;
             workForm = WF;
+            wwConn = new WorkWhisConnection(WF.GetPath());
             InitializeComponent();
         }
 
+        /// <summary>
+        /// Осуществление входа
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void btnLogin_Click(object sender, EventArgs e)
         {
-            this.Close();
-            IsLog = true;
+            string str;
+            bool success;
+            try
+            {
+                BDUser newUser = new BDUser(txtBoxLogin.Text.Trim().ToLower(), txtBoxPassword.Text.Trim().ToLower());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка логина или пароля",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtBoxLogin.Text = "";
+                txtBoxPassword.Text = "";
+                return;
+            }
+
+            wwConn.CheckUser(txtBoxLogin.Text.Trim().ToLower(), txtBoxPassword.Text.Trim().ToLower(), out str, out success);
+            if (success)
+            {
+                MessageBox.Show($"{str}", "Успешный вход", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                IsLog = true;
+                this.Close();
+            }
+            else
+            {
+                MessageBox.Show($"Ошибка входа: {str}", "Ошибка входа", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtBoxLogin.Text = "";
+                txtBoxPassword.Text = "";
+                IsLog = false;
+            }
         }
 
+        /// <summary>
+        /// Действия при закрытии формы
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void AutForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             workForm.Show();
@@ -40,9 +84,14 @@ namespace ProductRelase
             return IsLog;
         }
 
+        /// <summary>
+        /// Открытие формы регистрации
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void btnReg_Click(object sender, EventArgs e)
         {
-            RegistrationForm registrationForm = new RegistrationForm();
+            RegistrationForm registrationForm = new RegistrationForm(workForm);
             registrationForm.ShowDialog();
         }
     }

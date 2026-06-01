@@ -14,6 +14,7 @@ namespace ProductRelase
         private bool IsCon;
         private string path;
         AutForm autForm;
+
         /// <summary>
         /// Создание новой рабочей формы
         /// </summary>
@@ -42,6 +43,10 @@ namespace ProductRelase
             }
         }
 
+        /// <summary>
+        /// Настройка возможности взаимодействия с элементами интерфейса
+        /// </summary>
+        /// <param name="en">true — кликабельно, false — нет</param>
         private void IsEnabled(bool en)
         {
             lstBoxTables.Enabled = en;
@@ -91,7 +96,7 @@ namespace ProductRelase
         /// <summary>
         /// Получение пути к файлу с базой даннных
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Возвращает путь к файлу</returns>
         private string ConnPath()
         {
             path = null;
@@ -123,6 +128,11 @@ namespace ProductRelase
             return path;
         }
 
+        /// <summary>
+        /// Подключение к БД
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void tabCon_Click(object sender, EventArgs e)
         {
             path = ConnPath();
@@ -137,6 +147,11 @@ namespace ProductRelase
 
                 IsEnabled(false);
             }
+        }
+
+        public string GetPath()
+        {
+            return path;
         }
     }
 }
