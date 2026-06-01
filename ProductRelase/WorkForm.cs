@@ -11,16 +11,16 @@ namespace ProductRelase
 {
     public partial class WorkForm : Form
     {
-        private bool IsCon;
         private string path;
-        AutForm autForm;
+        private AutForm autForm;
+        private BDUser ActuallUser;
+        private WorkWhisConnection wwConn;
 
         /// <summary>
         /// Создание новой рабочей формы
         /// </summary>
         public WorkForm()
         {
-            IsCon = false;
             InitializeComponent();
         }
 
@@ -29,32 +29,107 @@ namespace ProductRelase
         /// </summary>
         public void NewLogin()
         {
+            cmbBoxTable.Items.Clear();
+            dataGridView1.DataSource = null;
             this.Hide();
             autForm = new AutForm(this);
             autForm.ShowDialog();
 
             if (autForm != null && autForm.IsLogin())
             {
-                IsEnabled(true);
+                ActuallUser = autForm.GetUser();
+                IsEnabled(ActuallUser.CheckRole());
+                wwConn = new WorkWhisConnection(path);
+                LoadTables();
             }
             else
             {
-                IsEnabled(false);
+                IsEnabled(-1);
             }
         }
 
         /// <summary>
         /// Настройка возможности взаимодействия с элементами интерфейса
         /// </summary>
-        /// <param name="en">true — кликабельно, false — нет</param>
-        private void IsEnabled(bool en)
+        /// <param name="en">от -1 до 6</param>
+        private void IsEnabled(int en)
         {
-            lstBoxTables.Enabled = en;
-            btnFindLine.Enabled = en;
-            btnAddLine.Enabled = en;
-            btnChangeLine.Enabled = en;
-            btnDeleteLine.Enabled = en;
-            btnCreateReport.Enabled = en;
+            if (en == 6)
+                en = 0; //Для исключения двух одинаковых case`ов
+
+            switch (en)
+            {
+                case (0):
+                    {
+                        cmbBoxTable.Enabled = true;
+                        btnFindLine.Enabled = true;
+                        btnAddLine.Enabled = true;
+                        btnChangeLine.Enabled = true;
+                        btnDeleteLine.Enabled = true;
+                        btnCreateReport.Enabled = true;
+                        return;
+                    }
+                case 1:
+                    {
+                        cmbBoxTable.Enabled = true;
+                        btnFindLine.Enabled = true;
+                        btnAddLine.Enabled = false;
+                        btnChangeLine.Enabled = false;
+                        btnDeleteLine.Enabled = false;
+                        btnCreateReport.Enabled = false;
+                        return;
+                    }
+                case 2:
+                    {
+                        cmbBoxTable.Enabled = true;
+                        btnFindLine.Enabled = true;
+                        btnAddLine.Enabled = true;
+                        btnChangeLine.Enabled = false;
+                        btnDeleteLine.Enabled = false;
+                        btnCreateReport.Enabled = false;
+                        return;
+                    }
+                case 3:
+                    {
+                        cmbBoxTable.Enabled = true;
+                        btnFindLine.Enabled = true;
+                        btnAddLine.Enabled = true;
+                        btnChangeLine.Enabled = true;
+                        btnDeleteLine.Enabled = false;
+                        btnCreateReport.Enabled = false;
+                        return;
+                    }
+                case 4:
+                    {
+                        cmbBoxTable.Enabled = true;
+                        btnFindLine.Enabled = true;
+                        btnAddLine.Enabled = true;
+                        btnChangeLine.Enabled = true;
+                        btnDeleteLine.Enabled = false;
+                        btnCreateReport.Enabled = true;
+                        return;
+                    }
+                case 5:
+                    {
+                        cmbBoxTable.Enabled = true;
+                        btnFindLine.Enabled = true;
+                        btnAddLine.Enabled = false;
+                        btnChangeLine.Enabled = false;
+                        btnDeleteLine.Enabled = false;
+                        btnCreateReport.Enabled = true;
+                        return;
+                    }
+                default:
+                    {
+                        cmbBoxTable.Enabled = false;
+                        btnFindLine.Enabled = false;
+                        btnAddLine.Enabled = false;
+                        btnChangeLine.Enabled = false;
+                        btnDeleteLine.Enabled = false;
+                        btnCreateReport.Enabled = false;
+                        return;
+                    }
+            }
         }
 
         /// <summary>
@@ -124,7 +199,6 @@ namespace ProductRelase
                 MessageBox.Show($"Ошибка при выборе файла базы данных: {ex.Message}",
                     "Ошибка при выборе файла", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-
             return path;
         }
 
@@ -144,14 +218,45 @@ namespace ProductRelase
             else
             {
                 btnLogChange.Visible = false;
-
-                IsEnabled(false);
+                IsEnabled(-1);
             }
         }
 
+        /// <summary>
+        /// Получение пути к файлу, выбранному в диалоговом окне
+        /// </summary>
+        /// <returns>Путь к рабочему файлу</returns>
         public string GetPath()
         {
             return path;
+        }
+
+        private void LoadTables()
+        {
+            cmbBoxTable.Items.Clear();
+            List<string> tableNames = new List<string>();
+            string str;
+            tableNames = wwConn.LoadTable(out str);
+            if (str == "")
+                foreach (string row in tableNames)
+                {
+                    if (ActuallUser.CheckRole() == 0 || row.Trim().ToLower() != "пользователи")
+                        cmbBoxTable.Items.Add(row);
+                }
+            else
+                MessageBox.Show($"Ошибка: {str}", "Ошибка загрузки таблиц",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        private void cmbBoxTable_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            string str = "";
+            DataTable table = wwConn.GetDataFromTable(cmbBoxTable.Text, out str);
+            if (str == "")
+                dataGridView1.DataSource = table;
+            else
+                MessageBox.Show($"Ошибка: {str}", "Ошибка загрузки выбранной таблицы",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
 }

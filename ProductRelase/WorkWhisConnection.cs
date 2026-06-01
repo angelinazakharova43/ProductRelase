@@ -2,6 +2,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.OleDb;
 using System.Reflection.Metadata.Ecma335;
 using System.Runtime.CompilerServices;
@@ -10,7 +11,7 @@ using System.Text;
 
 namespace ProductRelase
 {
-    internal class WorkWhisConnection
+    public class WorkWhisConnection
     {
         public string Path;
         private string connStr;
@@ -70,8 +71,6 @@ namespace ProductRelase
             if (conn != null && conn.State == System.Data.ConnectionState.Open)
             {
                 conn.Close();
-                conn.Dispose();
-                conn = null;
             }
         }
 
@@ -232,8 +231,14 @@ namespace ProductRelase
             }
         }
 
+        /// <summary>
+        /// Получение роли пользователя
+        /// </summary>
+        /// <param name="userLogin">Логин</param>
+        /// <returns>Возвращает роль пользователя</returns>
         public string GiveRole(string userLogin)
         {
+            OpenConnect();
             string selectQuery = $"SELECT роль FROM Пользователи WHERE логин = @userLogin";
             using (OleDbCommand checkCommand = new OleDbCommand(selectQuery, conn))
             {
@@ -241,13 +246,40 @@ namespace ProductRelase
                 object result = checkCommand.ExecuteScalar();
                 if (result != null)
                 {
+                    CloseConnect();
                     return result.ToString().Trim().ToLower();
                 }
                 else
                 {
+                    CloseConnect();
                     return "-";
                 }
             }
+        }
+
+        public List<string> LoadTable(out string str)
+        {
+            OpenConnect();
+            str = "";
+            List<string> tableNames = new List<string>();                           //Имя бд, имя схемы, имя таблицы, тип объекта
+            try
+            {
+                DataTable schemaTable = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, new object[] { null, null, null, "TABLE" });
+                foreach (DataRow row in schemaTable.Rows)
+                {
+                    string tableName = row["TABLE_NAME"].ToString();
+                    tableNames.Add(tableName);
+                }
+            }
+            catch (Exception ex)
+            {
+                str = ex.Message;
+            }
+            finally
+            {
+                CloseConnect();
+            }
+            return tableNames;
         }
 
         /// <summary>
@@ -262,6 +294,32 @@ namespace ProductRelase
             string usLogHash = Convert.ToHexString(hash);
 
             return usLogHash.Trim().ToLower();
+        }
+
+        public DataTable GetDataFromTable(string selectTable, out string str)
+        {
+            str = "";
+            DataTable table = new DataTable();
+            OpenConnect();
+            try
+            {
+                using (OleDbCommand command = new OleDbCommand($"SELECT * FROM [{selectTable}]", conn))
+                {
+                    using (OleDbDataReader reader = command.ExecuteReader())
+                    {
+                        table.Load(reader);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                str = ex.Message;
+            }
+            finally
+            {
+                CloseConnect();
+            }
+            return table;
         }
     }
 }

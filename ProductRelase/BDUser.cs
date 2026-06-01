@@ -5,12 +5,11 @@ using System.Text;
 
 namespace ProductRelase
 {
-    internal class BDUser
+    public class BDUser
     {
         private string LogText;
         private string PassWord;
         private string Role;
-        private WorkWhisConnection Conn;
 
         /// <summary>
         /// Пользователь
@@ -18,13 +17,14 @@ namespace ProductRelase
         /// <param name="logText">Логин (для регистрации/входа)</param>
         /// <param name="passWord">Пароль (для регистрации/входа)</param>
         /// <exception cref="Exception"> Неверный логин или пароль</exception>
-        public BDUser(string logText, string passWord)
+        public BDUser(string logText, string passWord, WorkWhisConnection Conn)
         {
             string str;
             if (CheckLogin(logText, out str) && CheckPassword(passWord, out str))
             {
                 LogText = logText;
                 PassWord = passWord;
+                Role = Conn.GiveRole(LogText);
             }
             else
             {
@@ -37,7 +37,7 @@ namespace ProductRelase
         /// </summary>
         /// <param name="Log">Логин (8-16 символов)</param>
         /// <param name="text">Текст ошибки</param>
-        /// <returns>true — логин соответствует условиям
+        /// <returns>true — логин соответствует условиям, 
         /// false — логин не соответствует условиям</returns>
         private bool CheckLogin(string Log, out string text)
         {
@@ -78,11 +78,10 @@ namespace ProductRelase
             return true;
         }
 
-        private void TakeRole()
-        {
-            Role = Conn.GiveRole(LogText);
-        }
-
+        /// <summary>
+        /// Получение роли
+        /// </summary>
+        /// <returns>0 – админ, от 1 до 6 — пользователи, -1 – пользователь без разрешений</returns>
         public int CheckRole()
         {
             switch (Role)

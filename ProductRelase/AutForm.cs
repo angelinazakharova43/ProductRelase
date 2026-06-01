@@ -12,7 +12,8 @@ namespace ProductRelase
     {
         private WorkForm workForm;
         private bool IsLog;
-        private WorkWhisConnection wwConn; 
+        private WorkWhisConnection wwConn;
+        private BDUser newUser;
 
         /// <summary>
         /// Форма для входа в систему
@@ -37,7 +38,7 @@ namespace ProductRelase
             bool success;
             try
             {
-                BDUser newUser = new BDUser(txtBoxLogin.Text.Trim().ToLower(), txtBoxPassword.Text.Trim().ToLower());
+                newUser = new BDUser(txtBoxLogin.Text.Trim().ToLower(), txtBoxPassword.Text.Trim().ToLower(), wwConn);
             }
             catch (Exception ex)
             {
@@ -93,6 +94,15 @@ namespace ProductRelase
         {
             RegistrationForm registrationForm = new RegistrationForm(workForm);
             registrationForm.ShowDialog();
+        }
+
+        /// <summary>
+        /// Получить объект вошедшего пользователя
+        /// </summary>
+        /// <returns>Объект вошедшего пользователя</returns>
+        public BDUser GetUser()
+        {
+            return newUser;
         }
     }
 }

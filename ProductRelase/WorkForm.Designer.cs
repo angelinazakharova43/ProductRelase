@@ -32,12 +32,12 @@
             CloseBtn = new Button();
             btnLogChange = new Button();
             filePage = new TabPage();
+            cmbBoxTable = new ComboBox();
             btnCreateReport = new Button();
             btnFindLine = new Button();
             btnDeleteLine = new Button();
             btnChangeLine = new Button();
             btnAddLine = new Button();
-            lstBoxTables = new ListBox();
             lblGetTable = new Label();
             dataGridView1 = new DataGridView();
             tabCon = new TabControl();
@@ -78,12 +78,12 @@
             // 
             // filePage
             // 
+            filePage.Controls.Add(cmbBoxTable);
             filePage.Controls.Add(btnCreateReport);
             filePage.Controls.Add(btnFindLine);
             filePage.Controls.Add(btnDeleteLine);
             filePage.Controls.Add(btnChangeLine);
             filePage.Controls.Add(btnAddLine);
-            filePage.Controls.Add(lstBoxTables);
             filePage.Controls.Add(lblGetTable);
             filePage.Controls.Add(dataGridView1);
             filePage.Location = new Point(4, 24);
@@ -93,6 +93,18 @@
             filePage.TabIndex = 1;
             filePage.Text = "Файл";
             filePage.UseVisualStyleBackColor = true;
+            // 
+            // cmbBoxTable
+            // 
+            cmbBoxTable.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbBoxTable.Enabled = false;
+            cmbBoxTable.Font = new Font("Segoe UI", 14F);
+            cmbBoxTable.FormattingEnabled = true;
+            cmbBoxTable.Location = new Point(167, 10);
+            cmbBoxTable.Name = "cmbBoxTable";
+            cmbBoxTable.Size = new Size(332, 33);
+            cmbBoxTable.TabIndex = 8;
+            cmbBoxTable.SelectedIndexChanged += cmbBoxTable_SelectedIndexChanged;
             // 
             // btnCreateReport
             // 
@@ -143,17 +155,6 @@
             btnAddLine.TabIndex = 3;
             btnAddLine.Text = "Добавить";
             btnAddLine.UseVisualStyleBackColor = true;
-            // 
-            // lstBoxTables
-            // 
-            lstBoxTables.BorderStyle = BorderStyle.FixedSingle;
-            lstBoxTables.Enabled = false;
-            lstBoxTables.Font = new Font("Segoe UI", 14F);
-            lstBoxTables.FormattingEnabled = true;
-            lstBoxTables.Location = new Point(167, 13);
-            lstBoxTables.Name = "lstBoxTables";
-            lstBoxTables.Size = new Size(265, 27);
-            lstBoxTables.TabIndex = 2;
             // 
             // lblGetTable
             // 
@@ -216,12 +217,12 @@
         private TabPage filePage;
         private Button btnChangeLine;
         private Button btnAddLine;
-        private ListBox lstBoxTables;
         private Label lblGetTable;
         private DataGridView dataGridView1;
         private TabControl tabCon;
         private Button btnDeleteLine;
         private Button btnCreateReport;
         private Button btnFindLine;
+        private ComboBox cmbBoxTable;
     }
 }

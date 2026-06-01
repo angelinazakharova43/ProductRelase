@@ -24,7 +24,7 @@ namespace ProductRelase
             {
                 try
                 {
-                    BDUser newUser = new BDUser(txtBoxLogin.Text.Trim().ToLower(), txtBoxPassword.Text.Trim().ToLower());
+                    BDUser newUser = new BDUser(txtBoxLogin.Text.Trim().ToLower(), txtBoxPassword.Text.Trim().ToLower(), wwConn);
                 }
                 catch (Exception ex)
                 {
