@@ -155,6 +155,7 @@
             btnAddLine.TabIndex = 3;
             btnAddLine.Text = "Добавить";
             btnAddLine.UseVisualStyleBackColor = true;
+            btnAddLine.Click += btnAddLine_Click;
             // 
             // lblGetTable
             // 

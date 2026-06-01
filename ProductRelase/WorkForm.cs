@@ -13,6 +13,7 @@ namespace ProductRelase
     {
         private string path;
         private AutForm autForm;
+        private AddForm addForm;
         private BDUser ActuallUser;
         private WorkWhisConnection wwConn;
 
@@ -257,6 +258,27 @@ namespace ProductRelase
             else
                 MessageBox.Show($"Ошибка: {str}", "Ошибка загрузки выбранной таблицы",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        private void btnAddLine_Click(object sender, EventArgs e)
+        {
+            string str = "";
+            if (cmbBoxTable.SelectedItem == null)
+                MessageBox.Show("Сначала выберите таблицу", "Элемент не выбран",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            else
+            {
+                DataTable table = wwConn.GetDataFromTable(cmbBoxTable.Text, out str);
+                if (str == "")
+                {
+                    addForm = new AddForm(table);
+                    addForm.Show();
+                }
+                else
+                    MessageBox.Show($"Ошибка: {str}", "Ошибка загрузки выбранной таблицы",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
         }
     }
 }
