@@ -11,7 +11,7 @@ using System.Text;
 
 namespace ProductRelase
 {
-    public class WorkWhisConnection
+    public class WorkWithAccess
     {
         public string Path;
         private string connStr;
@@ -21,7 +21,7 @@ namespace ProductRelase
         /// Объект для работы с БД
         /// </summary>
         /// <param name="path">Путь к БД</param>
-        public WorkWhisConnection(string path)
+        public WorkWithAccess(string path)
         {
             Path = path;
         }
@@ -39,28 +39,17 @@ namespace ProductRelase
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Ошибка создания подключения: {ex.Message}",
-                        "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     conn = null;
                 }
 
             if (conn == null)
-            {
-                MessageBox.Show("Не удалось создать подключение",
-                    "Ошибка подключения", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
+                throw new ArgumentNullException();
 
             try
             {
                 conn.Open();
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка при открытии соединения: {ex.Message}. " +
-                    "Проверьте, существует ли файл и не занят ли он другим приложением",
-                    "Ошибка открытия соединения", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            catch (Exception ex) { }
         }
 
         /// <summary>
@@ -69,9 +58,7 @@ namespace ProductRelase
         private void CloseConnect()
         {
             if (conn != null && conn.State == System.Data.ConnectionState.Open)
-            {
                 conn.Close();
-            }
         }
 
         /// <summary>
@@ -81,24 +68,34 @@ namespace ProductRelase
         /// <param name="userPassword">Пароль</param>
         /// <param name="str">Сообщение об ошибке/успешной регистрации</param>
         /// <returns>true — создан, false — не создан</returns>
-        public bool NewUser(string userLogin, string userPassword, out string str)
+        public void NewUser(string userLogin, string userPassword, out string str, out bool success)
         {
-            bool createNewUser;
             OpenConnect();
             try
             {
-                QuertyAddOrChech(true, userLogin, userPassword, out str, out createNewUser);
+                string checkQuery = "SELECT COUNT(*) FROM Пользователи WHERE Логин = @userLogin";
+                using (OleDbCommand checkCommand = new OleDbCommand(checkQuery, conn))
+                {
+                    checkCommand.Parameters.AddWithValue("@userLogin", userLogin);
+                    int count = (int)checkCommand.ExecuteScalar();
+                    if (count == 0) //Пользователя нет
+                    {
+                        ItsAdd(userLogin, Hash(userPassword), "Пользователь1", out str);
+                        success = true;
+                    }
+                    else
+                    {
+                        str = "Такой пользователь уже есть";
+                        success = false;
+                    }
+                }
             }
             catch (Exception ex)
             {
                 str = ex.Message;
-                createNewUser = false;
-                CloseConnect();
-                return createNewUser;
+                success = false;
             }
-            CloseConnect();
-
-            return createNewUser;
+            finally { CloseConnect(); }
         }
 
         /// <summary>
@@ -113,18 +110,30 @@ namespace ProductRelase
             OpenConnect();
             try
             {
-                QuertyAddOrChech(false, userLogin, userPassword, out str, out success);
+                string selectQuery = $"SELECT пароль FROM Пользователи WHERE логин = @userLogin";
+                using (OleDbCommand checkCommand = new OleDbCommand(selectQuery, conn))
+                {
+                    checkCommand.Parameters.AddWithValue("@userLogin", userLogin);
+                    object result = checkCommand.ExecuteScalar();
+                    if (result != null)
+                    {
+                        str = result.ToString().Trim().ToLower(); //Возвращаем хэш из БД
+                        success = true;
+                    }
+                    else
+                    {
+                        str = "Неверный пароль"; //Возвращаем ошибку
+                        success = false;
+                    }
+                }
             }
             catch (Exception ex)
             {
                 str = $"{ex.Message}";
                 success = false;
             }
-            if (!success)
-            {
-                CloseConnect();
-                return;
-            }
+            finally { CloseConnect(); }
+            if (!success) return;
             if (Hash(userPassword) == str)
             {
                 str = "Вход успешно совершён";
@@ -134,53 +143,6 @@ namespace ProductRelase
             {
                 str = "Неверный пароль";
                 success = false;
-            }
-
-            CloseConnect();
-        }
-
-        /// <summary>
-        /// Проверка существованя пользователя
-        /// </summary>
-        /// <param name="IsAdd">true — запрос на добавление, false — запрос на вход</param>
-        /// <param name="userLogin">Логин</param>
-        /// <param name="userPassword">Пароль</param>
-        /// <param name="str">Сообщение об ошибке или успешном входе (в случае входа возвращает хэш пароля)</param>
-        /// <param name="success">Если вход: true — вход осуществлён, false — нет.
-        /// Если добавление: true — пользователь добавлен, false — нет</param>
-        private void QuertyAddOrChech
-            (bool IsAdd, string userLogin, string userPassword, out string str, out bool success)
-        {
-            string checkQuery = "SELECT COUNT(*) FROM Пользователи WHERE Логин = @userLogin";
-            using (OleDbCommand checkCommand = new OleDbCommand(checkQuery, conn))
-            {
-                checkCommand.Parameters.AddWithValue("@userLogin", userLogin);
-                int count = (int)checkCommand.ExecuteScalar();
-                if (count == 0) //Пользователя нет
-                {
-                    if (IsAdd)
-                    {
-                        ItsAdd(userLogin, Hash(userPassword), "Пользователь1", out str);
-                        success = true;
-                    }
-                    else
-                    {
-                        str = "Такого пользователя нет";
-                        success = false;
-                    }
-                }
-                else //Пользователь есть
-                {
-                    if (IsAdd)
-                    {
-                        str = "Такой пользователь уже есть";
-                        success = false;
-                    }
-                    else
-                    {
-                        ItsCheck(userLogin, out str, out success);
-                    }
-                }
             }
         }
 
@@ -206,32 +168,6 @@ namespace ProductRelase
         }
 
         /// <summary>
-        /// Запрос на получение хэша пароля (на вход)
-        /// </summary>
-        /// <param name="userLogin">Логин</param>
-        /// <param name="str">Возвращает хэш/сообщение о неудачном поиске</param>
-        /// <param name="success">true — можно пытаться осуществить вход, false — нельзя</param>
-        private void ItsCheck(string userLogin, out string str, out bool success)
-        {
-            string selectQuery = $"SELECT пароль FROM Пользователи WHERE логин = @userLogin";
-            using (OleDbCommand checkCommand = new OleDbCommand(selectQuery, conn))
-            {
-                checkCommand.Parameters.AddWithValue("@userLogin", userLogin);
-                object result = checkCommand.ExecuteScalar();
-                if (result != null)
-                {
-                    str = result.ToString().Trim().ToLower();
-                    success = true;
-                }
-                else
-                {
-                    str = "Ошибка пароля в базе данных";
-                    success = false;
-                }
-            }
-        }
-
-        /// <summary>
         /// Получение роли пользователя
         /// </summary>
         /// <param name="userLogin">Логин</param>
@@ -239,24 +175,32 @@ namespace ProductRelase
         public string GiveRole(string userLogin)
         {
             OpenConnect();
+            OleDbCommand checkCommand = null;     object result = null;
             string selectQuery = $"SELECT роль FROM Пользователи WHERE логин = @userLogin";
-            using (OleDbCommand checkCommand = new OleDbCommand(selectQuery, conn))
+            try
             {
+                checkCommand = new OleDbCommand(selectQuery, conn);
                 checkCommand.Parameters.AddWithValue("@userLogin", userLogin);
-                object result = checkCommand.ExecuteScalar();
-                if (result != null)
-                {
-                    CloseConnect();
-                    return result.ToString().Trim().ToLower();
-                }
-                else
-                {
-                    CloseConnect();
-                    return "-";
-                }
+                result = checkCommand.ExecuteScalar();
+                if (result != null) return result.ToString().Trim().ToLower();
+                else return "-";
+            }
+            catch (Exception ex)
+            {
+                return "-";
+            }
+            finally
+            {
+                if (checkCommand != null) checkCommand.Dispose();
+                CloseConnect();
             }
         }
 
+        /// <summary>
+        /// Получение списка всех таблиц
+        /// </summary>
+        /// <param name="str">Сообщение об ошибке. В случае успеза равно ""</param>
+        /// <returns>Список всех таблиц</returns>
         public List<string> LoadTable(out string str)
         {
             OpenConnect();
@@ -276,9 +220,7 @@ namespace ProductRelase
                 str = ex.Message;
             }
             finally
-            {
-                CloseConnect();
-            }
+            { CloseConnect(); }
             return tableNames;
         }
 
@@ -292,10 +234,15 @@ namespace ProductRelase
             byte[] bytes = Encoding.UTF8.GetBytes(userPassword);
             byte[] hash = SHA256.HashData(bytes);
             string usLogHash = Convert.ToHexString(hash);
-
             return usLogHash.Trim().ToLower();
         }
 
+        /// <summary>
+        /// Получение всей таблицы по имени
+        /// </summary>
+        /// <param name="selectTable">Имя таблицы</param>
+        /// <param name="str">Сообщение об ошибке. В случае успеха равно ""</param>
+        /// <returns>Таблицу с нужным именем</returns>
         public DataTable GetDataFromTable(string selectTable, out string str)
         {
             str = "";
@@ -304,21 +251,13 @@ namespace ProductRelase
             try
             {
                 using (OleDbCommand command = new OleDbCommand($"SELECT * FROM [{selectTable}]", conn))
-                {
-                    using (OleDbDataReader reader = command.ExecuteReader())
-                    {
-                        table.Load(reader);
-                    }
-                }
+                using (OleDbDataReader reader = command.ExecuteReader())
+                table.Load(reader);
             }
             catch (Exception ex)
-            {
-                str = ex.Message;
-            }
+            { str = ex.Message; }
             finally
-            {
-                CloseConnect();
-            }
+            { CloseConnect(); }
             return table;
         }
     }

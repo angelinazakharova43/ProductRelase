@@ -12,8 +12,8 @@ namespace ProductRelase
     {
         private WorkForm workForm;
         private bool IsLog;
-        private WorkWhisConnection wwConn;
-        private BDUser newUser;
+        private string strLog;
+        private WorkWithAccess wwAccess;
 
         /// <summary>
         /// Форма для входа в систему
@@ -23,7 +23,7 @@ namespace ProductRelase
         {
             IsLog = false;
             workForm = WF;
-            wwConn = new WorkWhisConnection(WF.GetPath());
+            wwAccess = new WorkWithAccess(WF.GetPath());
             InitializeComponent();
         }
 
@@ -34,22 +34,22 @@ namespace ProductRelase
         /// <param name="e"></param>
         private void btnLogin_Click(object sender, EventArgs e)
         {
-            string str;
-            bool success;
-            try
+            string str;     bool success;
+            strLog = txtBoxLogin.Text.Trim().ToLower();
+            string strPas = txtBoxPassword.Text.Trim().ToLower();
+            if (strLog == null || strLog.Length < 8 || strLog.Length > 16)
             {
-                newUser = new BDUser(txtBoxLogin.Text.Trim().ToLower(), txtBoxPassword.Text.Trim().ToLower(), wwConn);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка логина или пароля",
+                MessageBox.Show($"Ошибка логина", "Ошибка логина",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtBoxLogin.Text = "";
-                txtBoxPassword.Text = "";
                 return;
             }
-
-            wwConn.CheckUser(txtBoxLogin.Text.Trim().ToLower(), txtBoxPassword.Text.Trim().ToLower(), out str, out success);
+            if (strPas == null || strPas.Length < 8 || strPas.Length > 16)
+            {
+                MessageBox.Show($"Ошибка пароля", "Ошибка пароля",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            wwAccess.CheckUser(strLog, strPas, out str, out success);
             if (success)
             {
                 MessageBox.Show($"{str}", "Успешный вход", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -76,14 +76,12 @@ namespace ProductRelase
         }
 
         /// <summary>
-        /// Поазывает, успешно ли прошёл вход в систему. Позволяет значению IsLog оставаться приватным (недоступным извне)
+        /// Показывает, успешно ли прошёл вход в систему. Позволяет значению IsLog оставаться приватным (недоступным извне)
         /// </summary>
         /// <returns>true – успешно
         /// false – не успешно</returns>
         public bool IsLogin()
-        {
-            return IsLog;
-        }
+        { return IsLog; }
 
         /// <summary>
         /// Открытие формы регистрации
@@ -97,12 +95,10 @@ namespace ProductRelase
         }
 
         /// <summary>
-        /// Получить объект вошедшего пользователя
+        /// Получение логина вошедшего пользователя. Позволяет значению strLog оставаться приватным (недоступным извне)
         /// </summary>
-        /// <returns>Объект вошедшего пользователя</returns>
-        public BDUser GetUser()
-        {
-            return newUser;
-        }
+        /// <returns>Логин вошедшего пользователя</returns>
+        public string GetUser()
+        { return strLog; }
     }
 }
