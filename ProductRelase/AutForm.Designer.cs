@@ -111,6 +111,7 @@
             Controls.Add(txtBoxLogin);
             Controls.Add(lblPassword);
             Controls.Add(lblLogin);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
             Name = "AutForm";
             Text = "Выпуск продукции — вход";
             FormClosing += AutForm_FormClosing;

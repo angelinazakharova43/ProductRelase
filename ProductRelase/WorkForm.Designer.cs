@@ -125,6 +125,7 @@
             btnFindLine.TabIndex = 6;
             btnFindLine.Text = "Найти запись";
             btnFindLine.UseVisualStyleBackColor = true;
+            btnFindLine.Click += btnFindLine_Click;
             // 
             // btnDeleteLine
             // 
@@ -135,6 +136,7 @@
             btnDeleteLine.TabIndex = 5;
             btnDeleteLine.Text = "Удалить";
             btnDeleteLine.UseVisualStyleBackColor = true;
+            btnDeleteLine.Click += btnDeleteLine_Click;
             // 
             // btnChangeLine
             // 
@@ -145,6 +147,7 @@
             btnChangeLine.TabIndex = 4;
             btnChangeLine.Text = "Редактировать";
             btnChangeLine.UseVisualStyleBackColor = true;
+            btnChangeLine.Click += btnChangeLine_Click;
             // 
             // btnAddLine
             // 

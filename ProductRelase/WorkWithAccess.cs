@@ -95,7 +95,8 @@ namespace ProductRelase
                 str = ex.Message;
                 success = false;
             }
-            finally { CloseConnect(); }
+            finally
+            { CloseConnect(); }
         }
 
         /// <summary>
@@ -132,7 +133,8 @@ namespace ProductRelase
                 str = $"{ex.Message}";
                 success = false;
             }
-            finally { CloseConnect(); }
+            finally
+            { CloseConnect(); }
             if (!success) return;
             if (Hash(userPassword) == str)
             {
@@ -175,7 +177,7 @@ namespace ProductRelase
         public string GiveRole(string userLogin)
         {
             OpenConnect();
-            OleDbCommand checkCommand = null;     object result = null;
+            OleDbCommand checkCommand = null; object result = null;
             string selectQuery = $"SELECT роль FROM Пользователи WHERE логин = @userLogin";
             try
             {
@@ -186,9 +188,7 @@ namespace ProductRelase
                 else return "-";
             }
             catch (Exception ex)
-            {
-                return "-";
-            }
+            { return "-"; }
             finally
             {
                 if (checkCommand != null) checkCommand.Dispose();
@@ -216,9 +216,7 @@ namespace ProductRelase
                 }
             }
             catch (Exception ex)
-            {
-                str = ex.Message;
-            }
+            { str = ex.Message; }
             finally
             { CloseConnect(); }
             return tableNames;
@@ -243,22 +241,116 @@ namespace ProductRelase
         /// <param name="selectTable">Имя таблицы</param>
         /// <param name="str">Сообщение об ошибке. В случае успеха равно ""</param>
         /// <returns>Таблицу с нужным именем</returns>
-        public DataTable GetDataFromTable(string selectTable, out string str)
+        public DataTable GetDataFromTable(string selectTable)
         {
-            str = "";
             DataTable table = new DataTable();
             OpenConnect();
-            try
-            {
-                using (OleDbCommand command = new OleDbCommand($"SELECT * FROM [{selectTable}]", conn))
-                using (OleDbDataReader reader = command.ExecuteReader())
+            using (OleDbCommand command = new OleDbCommand($"SELECT * FROM [{selectTable}]", conn))
+            using (OleDbDataReader reader = command.ExecuteReader())
                 table.Load(reader);
-            }
-            catch (Exception ex)
-            { str = ex.Message; }
-            finally
-            { CloseConnect(); }
+            CloseConnect();
             return table;
+        }
+
+        /// <summary>
+        /// Добавление новой строки в таблицу
+        /// </summary>
+        /// <param name="tabName"></param>
+        /// <param name="parameters"></param>
+        /// <returns>Число добавленных строк</returns>
+        /// <exception cref="ArgumentException"></exception>
+        public int AddLine(string tabName, OleDbParameter[] parameters)
+        {
+            OpenConnect();
+            int i = 0;
+            if (parameters == null || parameters.Length == 0)
+                throw new ArgumentException("Параметры не могут быть пустыми", nameof(parameters));
+            string columnNames = string.Join(", ", parameters.Select(p => p.ParameterName.TrimStart('@')));
+            string paramNames = string.Join(", ", parameters.Select(p => p.ParameterName));
+            string insertQuery = $"INSERT INTO [{tabName}] ({columnNames}) VALUES ({paramNames})";
+            Console.WriteLine(insertQuery);
+            using (OleDbCommand insertCommand = new OleDbCommand(insertQuery, conn))
+            {
+                foreach (OleDbParameter param in parameters)
+                    insertCommand.Parameters.Add(param);
+                i = insertCommand.ExecuteNonQuery();
+            }
+            CloseConnect();
+            return i;
+        }
+
+        /// <summary>
+        /// Получение схемы таблицы
+        /// </summary>
+        /// <param name="tableName">Имя таблицы</param>
+        /// <returns>Схема таблицы</returns>
+        public DataTable GetTableSchema(string tableName)
+        {
+            DataTable schema = null;
+            OpenConnect();
+            string querty = $"SELECT * FROM [{tableName}]";
+            using OleDbCommand command = new OleDbCommand(querty, conn);
+            using OleDbDataAdapter adapter = new OleDbDataAdapter(command);
+            schema = new DataTable();
+            adapter.FillSchema(schema, SchemaType.Source);
+            CloseConnect();
+            return schema;
+        }
+
+        /// <summary>
+        /// Метод для удаления записи
+        /// </summary>
+        /// <param name="tableName">Имя таблицы</param>
+        /// <param name="columnNames">Параметры: список имён колонок</param>
+        /// <param name="values">Параметры: список с данными (размер списков доолжен быть равен)</param>
+        public int DeleteLine(string tableName, List<string> columnNames, List<string> values)
+        {
+            int n = 0;
+            OpenConnect();
+            string whereStr = "";
+            for (int i = 0; i < columnNames.Count; i++)
+            {
+                whereStr += $"[{columnNames[i]}] = @param{i}";
+                if (i < columnNames.Count - 1) whereStr += " AND ";
+            }
+            string deleteQuery = $"DELETE FROM [{tableName}] WHERE {whereStr}";
+            using (OleDbCommand command = new OleDbCommand(deleteQuery, conn))
+            {
+                for (int i = 0; i < values.Count; i++)
+                    command.Parameters.AddWithValue($"@param{i}", values[i]);
+                n = command.ExecuteNonQuery();
+            }
+            CloseConnect();
+            return n;
+        }
+
+        public int UpdateLine(string tableName, OleDbParameter[] parameters, List<string> oldValues, List<string> columnNames)
+        {
+            int n;
+            OpenConnect();
+            string setStr = "";
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                setStr += $"[{parameters[i].ParameterName}] = @new_{i}";
+                if (i < parameters.Length - 1) setStr += ", ";
+            }
+            string whereStr = "";
+            for (int i = 0; i < columnNames.Count; i++)
+            {
+                whereStr += $"[{columnNames[i]}] = @old_{i}";
+                if (i < columnNames.Count - 1) whereStr += " AND ";
+            }
+            string updateQuery = $"UPDATE [{tableName}] SET {setStr} WHERE {whereStr}";
+            using (OleDbCommand command = new OleDbCommand(updateQuery, conn))
+            {
+                for (int i = 0; i < parameters.Length; i++)
+                    command.Parameters.AddWithValue($"@new_{i}", parameters[i].Value);
+                for (int i = 0; i < oldValues.Count; i++)
+                    command.Parameters.AddWithValue($"@old_{i}", oldValues[i]);
+                n = command.ExecuteNonQuery();
+            }
+            CloseConnect();
+            return n;
         }
     }
 }

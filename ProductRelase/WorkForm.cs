@@ -14,7 +14,6 @@ namespace ProductRelase
         private string path;
         private string Role;
         private AutForm autForm;
-        private AddForm addForm;
         private WorkWithAccess wwAccess;
         private WorkWithConnect wwConnect = new WorkWithConnect();
 
@@ -134,7 +133,7 @@ namespace ProductRelase
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private void CloseBtn_Click(object sender, EventArgs e)
-        {  this.Close(); }
+        { this.Close(); }
 
         /// <summary>
         /// Смена учётной записи
@@ -171,6 +170,7 @@ namespace ProductRelase
             if (path != null)
             {
                 btnLogChange.Visible = true;
+                wwAccess = new WorkWithAccess(path);
                 NewLogin();
             }
             else
@@ -201,8 +201,8 @@ namespace ProductRelase
                 foreach (string row in tableNames)
                     if (Role == "админ" || row.Trim().ToLower() != "пользователи")
                         cmbBoxTable.Items.Add(row);
-            else MessageBox.Show($"Ошибка: {str}", "Ошибка загрузки таблиц",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    else MessageBox.Show($"Ошибка: {str}", "Ошибка загрузки таблиц",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
         /// <summary>
@@ -212,37 +212,138 @@ namespace ProductRelase
         /// <param name="e"></param>
         private void cmbBoxTable_SelectedIndexChanged(object sender, EventArgs e)
         {
-            string str = "";
-            DataTable table = wwAccess.GetDataFromTable(cmbBoxTable.Text, out str);
-            if (str == "")
-                dataGridView1.DataSource = table;
-            else
-                MessageBox.Show($"Ошибка: {str}", "Ошибка загрузки выбранной таблицы",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            LoadTab();
         }
 
         /// <summary>
-        /// Открытие формы добавления/поиска/редактирования/удаления
+        /// Загрузка/обновление данных выбранной таблицы
+        /// </summary>
+        private void LoadTab()
+        {
+            try
+            {
+                DataTable table = wwAccess.GetDataFromTable(cmbBoxTable.Text);
+                dataGridView1.DataSource = table;
+                dataGridView1.Sort(dataGridView1.Columns[0], ListSortDirection.Ascending);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка загрузки выбранной таблицы",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        /// <summary>
+        /// Открытие формы добавления
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private void btnAddLine_Click(object sender, EventArgs e)
         {
-            string str = "";
+            NewAddForm(2);
+        }
+
+        /// <summary>
+        /// Открытие формы поиска
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnFindLine_Click(object sender, EventArgs e)
+        {
+            NewAddForm(1);
+        }
+
+        /// <summary>
+        /// Открытие формы изменения
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnChangeLine_Click(object sender, EventArgs e)
+        {
+            if (dataGridView1.CurrentRow == null)
+            {
+                MessageBox.Show("Выберите строку для изменения", "Ошибка",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            NewAddForm(3);
+        }
+
+        /// <summary>
+        /// Открытие формы удаления
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnDeleteLine_Click(object sender, EventArgs e)
+        {
+            if (dataGridView1.CurrentRow == null)
+            {
+                MessageBox.Show("Выберите строку для удаления", "Ошибка",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (MessageBox.Show("Удалить выбранную запись?", "Подтверждение",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                try
+                {
+                    DataGridViewRow selectedRow = dataGridView1.CurrentRow;
+                    List<string> columnNames = new List<string>();
+                    List<string> values = new List<string>();
+                    for (int i = 0; i < dataGridView1.Columns.Count; i++)
+                    {
+                        string colName = dataGridView1.Columns[i].Name;
+                        object cellValue = selectedRow.Cells[i].Value;
+                        if (cellValue != null && cellValue != DBNull.Value)
+                        {
+                            columnNames.Add(colName);
+                            values.Add(cellValue.ToString());
+                        }
+                    }
+                    int n = wwAccess.DeleteLine(cmbBoxTable.Text, columnNames, values);
+                    if (n > 0)
+                    {
+                        MessageBox.Show("Запись удалена", "Запись удалена",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        LoadTab();
+                    }
+                    else MessageBox.Show("Запись не найдена", "Запись не найдена",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                catch (Exception ex)
+                { MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка удаления записи",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            }
+        }
+
+
+        public void UpdateFilters(DataView dataView)
+        {
+            if (dataView != null) dataGridView1.DataSource = dataView;
+            else
+            {
+                DataTable table = wwAccess.GetDataFromTable(cmbBoxTable.Text);
+                dataGridView1.DataSource = table;
+                dataGridView1.Sort(dataGridView1.Columns[0], ListSortDirection.Ascending);
+            }
+        }
+
+        /// <summary>
+        /// Открытие формы добавления/поиска/удаления/изменения
+        /// </summary>
+        /// <param name="i">Номер совершаемого действия. 
+        /// 1 — найти запись, 
+        /// 2 — добавить запись, 
+        /// 3 — изменить запись, 
+        private void NewAddForm(byte i)
+        {
             if (cmbBoxTable.SelectedItem == null)
                 MessageBox.Show("Сначала выберите таблицу", "Элемент не выбран",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
             else
             {
-                DataTable table = wwAccess.GetDataFromTable(cmbBoxTable.Text, out str);
-                if (str == "")
-                {
-                    addForm = new AddForm(table);
-                    addForm.Show();
-                }
-                else
-                    MessageBox.Show($"Ошибка: {str}", "Ошибка загрузки выбранной таблицы",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                AddForm addForm = new AddForm(cmbBoxTable.Text, wwAccess, i, this, dataGridView1.CurrentRow);
+                addForm.Show();
             }
         }
     }
