@@ -193,16 +193,20 @@ namespace ProductRelase
         /// </summary>
         private void LoadTables()
         {
-            cmbBoxTable.Items.Clear();
-            List<string> tableNames = new List<string>();
-            string str;
-            tableNames = wwAccess.LoadTable(out str);
-            if (str == "")
+            try
+            {
+                cmbBoxTable.Items.Clear();
+                List<string> tableNames = new List<string>();
+                tableNames = wwAccess.LoadTable();
                 foreach (string row in tableNames)
                     if (Role == "админ" || row.Trim().ToLower() != "пользователи")
                         cmbBoxTable.Items.Add(row);
-                    else MessageBox.Show($"Ошибка: {str}", "Ошибка загрузки таблиц",
-                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка загрузки имён таблиц: {ex.Message}", "Ошибка загрузки имён таблиц",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         /// <summary>
@@ -311,8 +315,10 @@ namespace ProductRelase
                             MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
                 catch (Exception ex)
-                { MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка удаления записи",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+                {
+                    MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка удаления записи",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
         }
 
@@ -345,6 +351,12 @@ namespace ProductRelase
                 AddForm addForm = new AddForm(cmbBoxTable.Text, wwAccess, i, this, dataGridView1.CurrentRow);
                 addForm.Show();
             }
+        }
+
+        private void btnCreateReport_Click(object sender, EventArgs e)
+        {
+            QuertyForm quertyForm = new QuertyForm(wwAccess);
+            quertyForm.Show();
         }
     }
 }

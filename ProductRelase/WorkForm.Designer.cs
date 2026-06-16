@@ -115,6 +115,7 @@
             btnCreateReport.TabIndex = 7;
             btnCreateReport.Text = "Создать отчёт";
             btnCreateReport.UseVisualStyleBackColor = true;
+            btnCreateReport.Click += btnCreateReport_Click;
             // 
             // btnFindLine
             // 

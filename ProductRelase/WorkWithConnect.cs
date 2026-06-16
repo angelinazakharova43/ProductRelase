@@ -8,26 +8,18 @@ namespace ProductRelase
     {
         public WorkWithConnect() { }
 
+        /// <summary>
+        /// Диалоговое окно с выбором файла
+        /// </summary>
+        /// <returns>Путь к файлу</returns>
         public string ConnPath()
         {
             string path = null;
             OpenFileDialog fileDialog = new OpenFileDialog();
-            try
-            {
-                fileDialog.InitialDirectory = AppDomain.CurrentDomain.BaseDirectory;
-                fileDialog.Filter = "Access Database (*.accdb)|*.accdb";
-                fileDialog.FilterIndex = 1;
-
-                if (fileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    path = fileDialog.FileName;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка при выборе файла базы данных: {ex.Message}",
-                    "Ошибка при выборе файла", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            fileDialog.InitialDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            fileDialog.Filter = "Access Database (*.accdb)|*.accdb";
+            fileDialog.FilterIndex = 1;
+            if (fileDialog.ShowDialog() == DialogResult.OK) path = fileDialog.FileName;
             return path;
         }
     }

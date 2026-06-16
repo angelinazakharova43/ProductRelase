@@ -38,18 +38,9 @@ namespace ProductRelase
                     conn = new OleDbConnection(connStr);
                 }
                 catch (Exception ex)
-                {
-                    conn = null;
-                }
-
-            if (conn == null)
-                throw new ArgumentNullException();
-
-            try
-            {
-                conn.Open();
-            }
-            catch (Exception ex) { }
+                { conn = null; }
+            if (conn == null) throw new ArgumentNullException();
+            conn.Open();
         }
 
         /// <summary>
@@ -59,6 +50,19 @@ namespace ProductRelase
         {
             if (conn != null && conn.State == System.Data.ConnectionState.Open)
                 conn.Close();
+        }
+
+        /// <summary>
+        /// Проверка существования таблицы
+        /// </summary>
+        /// <param name="tableName">Имя таблицы</param>
+        /// <returns>true — существует, false — нет</returns>
+        private bool CheckTable(string tableName)
+        {
+            DataTable schemaTable = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Tables,
+                    new object[] { null, null, $"{tableName}", "TABLE" });
+            if (schemaTable.Rows.Count == 0) return false;
+            else return true;
         }
 
         /// <summary>
@@ -73,26 +77,41 @@ namespace ProductRelase
             OpenConnect();
             try
             {
-                string checkQuery = "SELECT COUNT(*) FROM Пользователи WHERE Логин = @userLogin";
+                if (!CheckTable("Пользователи"))
+                {
+                    str = "Таблица пользователей не найдена";
+                    success = false;
+                    return;
+                }
+                string checkQuery = "SELECT COUNT(*) FROM [Пользователи] WHERE [Логин] = @userLogin";
                 using (OleDbCommand checkCommand = new OleDbCommand(checkQuery, conn))
                 {
                     checkCommand.Parameters.AddWithValue("@userLogin", userLogin);
                     int count = (int)checkCommand.ExecuteScalar();
-                    if (count == 0) //Пользователя нет
+                    if (count == 0)
                     {
-                        ItsAdd(userLogin, Hash(userPassword), "Пользователь1", out str);
-                        success = true;
+                        CloseConnect();
+                        if (ItsAdd(userLogin, Hash(userPassword), "-"))
+                        {
+                            str = "Пользователь успешно зарегистрирован";
+                            success = true;
+                        }
+                        else
+                        {
+                            str = "Ошибка при добавлении пользователя";
+                            success = false;
+                        }
                     }
                     else
                     {
-                        str = "Такой пользователь уже есть";
+                        str = "Такой пользователь уже существует";
                         success = false;
                     }
                 }
             }
             catch (Exception ex)
             {
-                str = ex.Message;
+                str = $"Ошибка: {ex.Message}";
                 success = false;
             }
             finally
@@ -111,62 +130,63 @@ namespace ProductRelase
             OpenConnect();
             try
             {
-                string selectQuery = $"SELECT пароль FROM Пользователи WHERE логин = @userLogin";
+                if (!CheckTable("Пользователи"))
+                {
+                    str = "Таблица пользователей не найдена";
+                    success = false;
+                    return;
+                }
+                string selectQuery = "SELECT [Пароль] FROM [Пользователи] WHERE [Логин] = @userLogin";
                 using (OleDbCommand checkCommand = new OleDbCommand(selectQuery, conn))
                 {
                     checkCommand.Parameters.AddWithValue("@userLogin", userLogin);
                     object result = checkCommand.ExecuteScalar();
                     if (result != null)
                     {
-                        str = result.ToString().Trim().ToLower(); //Возвращаем хэш из БД
-                        success = true;
+                        string storedHash = result.ToString().Trim().ToLower();
+                        if (Hash(userPassword) == storedHash)
+                        {
+                            str = "Вход успешно совершён";
+                            success = true;
+                        }
+                        else
+                        {
+                            str = "Неверный пароль";
+                            success = false;
+                        }
                     }
                     else
                     {
-                        str = "Неверный пароль"; //Возвращаем ошибку
+                        str = "Пользователь не найден";
                         success = false;
                     }
                 }
             }
             catch (Exception ex)
             {
-                str = $"{ex.Message}";
+                str = $"Ошибка: {ex.Message}";
                 success = false;
             }
             finally
             { CloseConnect(); }
-            if (!success) return;
-            if (Hash(userPassword) == str)
-            {
-                str = "Вход успешно совершён";
-                success = true;
-            }
-            else
-            {
-                str = "Неверный пароль";
-                success = false;
-            }
         }
 
         /// <summary>
-        /// Запрос на добавление
+        /// Запрос на добавление пользователя
         /// </summary>
         /// <param name="userLogin">Логин</param>
         /// <param name="userPassword">Хэш пароля</param>
         /// <param name="userRole">Роль</param>
-        /// <param name="str">Возвращает сообщение об успешном добавлении пользователя</param>
-        private void ItsAdd(string userLogin, string userPassword, string userRole, out string str)
+        private bool ItsAdd(string userLogin, string userPassword, string userRole)
         {
-            string insertQuery = "INSERT INTO Пользователи (Логин, Пароль, Роль) " +
-                "VALUES (@userLogin, @userPassword, @userRole)";
-            using (OleDbCommand insertCommand = new OleDbCommand(insertQuery, conn))
+            OleDbParameter[] parameters = new OleDbParameter[]
             {
-                insertCommand.Parameters.AddWithValue("@userLogin", userLogin);
-                insertCommand.Parameters.AddWithValue("@userPassword", userPassword);
-                insertCommand.Parameters.AddWithValue("@userRole", userRole);
-                insertCommand.ExecuteNonQuery();
-            }
-            str = "Пользователь добавлен в систему";
+                new OleDbParameter("@Логин", userLogin),
+                new OleDbParameter("@Пароль", userPassword),
+                new OleDbParameter("@Роль", userRole)
+            };
+            int rows = AddLine("Пользователи", parameters);
+            return rows > 0;
         }
 
         /// <summary>
@@ -176,49 +196,40 @@ namespace ProductRelase
         /// <returns>Возвращает роль пользователя</returns>
         public string GiveRole(string userLogin)
         {
-            OpenConnect();
-            OleDbCommand checkCommand = null; object result = null;
-            string selectQuery = $"SELECT роль FROM Пользователи WHERE логин = @userLogin";
             try
             {
-                checkCommand = new OleDbCommand(selectQuery, conn);
-                checkCommand.Parameters.AddWithValue("@userLogin", userLogin);
-                result = checkCommand.ExecuteScalar();
-                if (result != null) return result.ToString().Trim().ToLower();
-                else return "-";
+                OpenConnect();
+                if (!CheckTable("Пользователи")) return "-";
+                string selectQuery = "SELECT [Роль] FROM [Пользователи] WHERE [Логин] = @userLogin";
+                using (OleDbCommand command = new OleDbCommand(selectQuery, conn))
+                {
+                    command.Parameters.AddWithValue("@userLogin", userLogin);
+                    object result = command.ExecuteScalar();
+                    if (result == null) return "-";
+                    else return result.ToString().Trim();
+                }
             }
-            catch (Exception ex)
+            catch
             { return "-"; }
             finally
-            {
-                if (checkCommand != null) checkCommand.Dispose();
-                CloseConnect();
-            }
+            { CloseConnect(); }
         }
 
         /// <summary>
         /// Получение списка всех таблиц
         /// </summary>
-        /// <param name="str">Сообщение об ошибке. В случае успеза равно ""</param>
         /// <returns>Список всех таблиц</returns>
-        public List<string> LoadTable(out string str)
+        public List<string> LoadTable()
         {
-            OpenConnect();
-            str = "";
-            List<string> tableNames = new List<string>();                           //Имя бд, имя схемы, имя таблицы, тип объекта
-            try
+            List<string> tableNames = new List<string>();
+            OpenConnect();                                                      //Имя бд, имя схемы, имя таблицы, тип объекта
+            DataTable schemaTable = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, new object[] { null, null, null, "TABLE" });
+            foreach (DataRow row in schemaTable.Rows)
             {
-                DataTable schemaTable = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, new object[] { null, null, null, "TABLE" });
-                foreach (DataRow row in schemaTable.Rows)
-                {
-                    string tableName = row["TABLE_NAME"].ToString();
-                    tableNames.Add(tableName);
-                }
+                string tableName = row["TABLE_NAME"].ToString();
+                tableNames.Add(tableName);
             }
-            catch (Exception ex)
-            { str = ex.Message; }
-            finally
-            { CloseConnect(); }
+            CloseConnect();
             return tableNames;
         }
 
@@ -239,7 +250,6 @@ namespace ProductRelase
         /// Получение всей таблицы по имени
         /// </summary>
         /// <param name="selectTable">Имя таблицы</param>
-        /// <param name="str">Сообщение об ошибке. В случае успеха равно ""</param>
         /// <returns>Таблицу с нужным именем</returns>
         public DataTable GetDataFromTable(string selectTable)
         {
@@ -258,17 +268,15 @@ namespace ProductRelase
         /// <param name="tabName"></param>
         /// <param name="parameters"></param>
         /// <returns>Число добавленных строк</returns>
-        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="ArgumentException">Параметры не могут быть пустыми</exception>
         public int AddLine(string tabName, OleDbParameter[] parameters)
         {
             OpenConnect();
             int i = 0;
-            if (parameters == null || parameters.Length == 0)
-                throw new ArgumentException("Параметры не могут быть пустыми", nameof(parameters));
+            if (parameters == null || parameters.Length == 0) throw new ArgumentException("Параметры не могут быть пустыми", nameof(parameters));
             string columnNames = string.Join(", ", parameters.Select(p => p.ParameterName.TrimStart('@')));
             string paramNames = string.Join(", ", parameters.Select(p => p.ParameterName));
             string insertQuery = $"INSERT INTO [{tabName}] ({columnNames}) VALUES ({paramNames})";
-            Console.WriteLine(insertQuery);
             using (OleDbCommand insertCommand = new OleDbCommand(insertQuery, conn))
             {
                 foreach (OleDbParameter param in parameters)
@@ -324,6 +332,14 @@ namespace ProductRelase
             return n;
         }
 
+        /// <summary>
+        /// Метод для обновления записи
+        /// </summary>
+        /// <param name="tableName">Имя таблицы</param>
+        /// <param name="parameters">Набор параметров</param>
+        /// <param name="oldValues">Список старых данных</param>
+        /// <param name="columnNames">Список имён колонок</param>
+        /// <returns>Количество изменённых записей</returns>
         public int UpdateLine(string tableName, OleDbParameter[] parameters, List<string> oldValues, List<string> columnNames)
         {
             int n;
@@ -351,6 +367,53 @@ namespace ProductRelase
             }
             CloseConnect();
             return n;
+        }
+
+        /// <summary>
+        /// Получение словаря с ключевыми полями
+        /// </summary>
+        /// <param name="tableName">Имя таблицы</param>
+        /// <returns>Словарь с ключевыми полями</returns>
+        public Dictionary<string, string> GetForeignKeysForTable(string tableName)
+        {
+            Dictionary<string, string> foreignKeys = new Dictionary<string, string>();
+            OpenConnect();
+            try
+            {
+                DataTable schema = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Foreign_Keys, null);
+                if (schema != null)
+                {
+                    foreach (DataRow row in schema.Rows)
+                    {
+                        string fkTable = row["FK_TABLE_NAME"].ToString();
+                        string fkColumn = row["FK_COLUMN_NAME"].ToString();
+                        string pkTable = row["PK_TABLE_NAME"].ToString();
+                        if (fkTable == tableName) foreignKeys[fkColumn] = pkTable;
+                    }
+                }
+            }
+            finally
+            { CloseConnect(); }
+            return foreignKeys;
+        }
+
+        /// <summary>
+        /// Запрос на формирование отчёта
+        /// </summary>
+        /// <param name="sql">SQL запрос</param>
+        /// <param name="parameters">Словарь с параметрами</param>
+        /// <returns>Таблица по запросу</returns>
+        public DataTable ExecuteParameterizedQuery(string sql, Dictionary<string, object> parameters)
+        {
+            DataTable table = new DataTable();
+            OpenConnect();
+            OleDbCommand command = new OleDbCommand(sql, conn);
+            foreach (var param in parameters)
+                command.Parameters.AddWithValue(param.Key, param.Value);
+            OleDbDataAdapter adapter = new OleDbDataAdapter(command);
+                adapter.Fill(table);
+            CloseConnect();
+            return table;
         }
     }
 }
