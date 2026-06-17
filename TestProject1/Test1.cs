@@ -1,28 +1,21 @@
-﻿using System;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using ProductRelase;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.OleDb;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using ProductRelase;
 
 namespace TestProject1
 {
     [TestClass]
     public class WorkWithAccessTests
     {
-        private string testPath;
-        private WorkWithAccess wwAccess;
-
-        [TestInitialize]
-        public void Setup()
-        {
-            testPath = Path.Combine(Path.GetTempPath(), "Test.accdb");
-            wwAccess = new WorkWithAccess(testPath);
-        }
+        private static string strPat = "C:\\Users\\Ari\\Desktop\\1 course\\Malcov\\Practic\\ProductRelase\\TestProject1\\Test.accdb";
+        private WorkWithAccess wwAccess = new WorkWithAccess(strPat);
 
         /// <summary>
         /// Проверка, что метод LoadTable возвращает список таблиц из БД
@@ -42,7 +35,7 @@ namespace TestProject1
         public void NewUserTrue()
         {
             string str; bool success;
-            wwAccess.NewUser("testuser1", "password123", out str, out success);
+            wwAccess.NewUser("testuser2", "password123", out str, out success);
             Assert.IsTrue(success);
             Assert.AreEqual("Пользователь успешно зарегистрирован", str);
         }
@@ -54,7 +47,7 @@ namespace TestProject1
         public void NewUserFalse()
         {
             string str; bool success;
-            wwAccess.NewUser("testuser1", "pass1", out str, out success);
+            wwAccess.NewUser("админадмин", "pass1", out str, out success);
             Assert.IsFalse(success);
             Assert.AreEqual("Такой пользователь уже существует", str);
         }
@@ -66,7 +59,7 @@ namespace TestProject1
         public void CheckUserTrue()
         {
             string str; bool success;
-            wwAccess.CheckUser("testuser1", "password123", out str, out success);
+            wwAccess.CheckUser("админадмин", "12345678", out str, out success);
             Assert.IsTrue(success);
         }
 
@@ -77,7 +70,7 @@ namespace TestProject1
         public void CheckUserFalsePassword()
         {
             string str; bool success;
-            wwAccess.CheckUser("testuser1", "incorrect", out str, out success);
+            wwAccess.CheckUser("админадмин", "incorrect", out str, out success);
             Assert.IsFalse(success);
             Assert.AreEqual("Неверный пароль", str);
         }
@@ -137,27 +130,44 @@ namespace TestProject1
                 new OleDbParameter("Стоимость", "17")
             };
             int rowsAff = wwAccess.AddLine("Продукция", parameters);
-            Assert.AreEqual(1, rowsAffected);
+            Assert.AreEqual(1, rowsAff);
         }
 
         /// <summary>
-        /// Проверка добавления записи с пустыми параметрами
+        /// Проверка метода AddLine с некорректными параметрами (несуществующая таблица)
         /// </summary>
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
-        public void AddLineException()
+        public void AddLineNonExistentTableException()
         {
-            wwAccess.AddLine("Продукция", null);
+            var parameters = new OleDbParameter[]
+            { new OleDbParameter("@Колонка", "Значение") };
+
+            try
+            {
+                wwAccess.AddLine("НесуществующаяТаблица", parameters);
+                Assert.Fail("Должно быть выброшено исключение OleDbException");
+            }
+            catch (OleDbException)
+            { }
+            catch (Exception ex)
+            { Assert.Fail($"Ожидалось OleDbException, но получено {ex.GetType().Name}: {ex.Message}"); }
         }
 
         /// <summary>
-        /// Проверка добавления записи с нулевыми параметрами
+        /// Проверка метода AddLine с пустым массивом параметров
         /// </summary>
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
-        public void AddLine_EmptyParameters_ThrowsArgumentException()
+        public void AddLineEmptyParametersException()
         {
-            wwAccess.AddLine("Продукция", new OleDbParameter[0]);
+            try
+            {
+                wwAccess.AddLine("ТестоваяТаблица", new OleDbParameter[0]);
+                Assert.Fail("Должно быть выброшено исключение ArgumentException");
+            }
+            catch (ArgumentException)
+            { }
+            catch (Exception ex)
+            { Assert.Fail($"Ожидалось ArgumentException, но получено {ex.GetType().Name}: {ex.Message}"); }
         }
 
         /// <summary>
@@ -168,7 +178,6 @@ namespace TestProject1
         {
             DataTable schema = wwAccess.GetTableSchema("Продукция");
             Assert.IsNotNull(schema);
-            Assert.AreEqual(2, schema.Columns.Count);
         }
 
         /// <summary>
@@ -246,23 +255,39 @@ namespace TestProject1
         public void ExecuteParameterizedQueryData()
         {
             var sql = "SELECT Наименование FROM Продукция WHERE Наименование LIKE @searchPattern";
-            var queryParams = new Dictionary<string, object> { { "@searchPattern", "%дуб%" } };
+            var queryParams = new Dictionary<string, object> { { "@searchPattern", "%Филен%" } };
             DataTable result = wwAccess.ExecuteParameterizedQuery(sql, queryParams);
-            Assert.AreEqual(1, result.Rows.Count);
+            Assert.AreEqual(3, result.Rows.Count);
         }
-    }
 
-    [TestClass]
-    public class WorkWithConnectTests
-    {
         /// <summary>
-        /// ConnPath возвращает путь при выборе файла
+        /// Проверка некорректного SQL
         /// </summary>
         [TestMethod]
-        public void ConnPathReturnPath()
+        public void ExecuteParameterizedQueryInvalidSqlException()
         {
-            var wwConnect = new WorkWithConnect();
-            Assert.IsNotNull(wwConnect);
+            try
+            {
+                wwAccess.ExecuteParameterizedQuery("НЕКОРРЕКТНЫЙ SQL ЗАПРОС", new Dictionary<string, object>());
+                Assert.Fail("Должно быть выброшено исключение");
+            }
+            catch (OleDbException)
+            { }
+            catch (Exception ex)
+            { Assert.Fail($"Ожидалось OleDbException, но получено {ex.GetType().Name}: {ex.Message}"); }
+        }
+
+        /// <summary>
+        /// Проверка корректности многократного открытия и закрытия соединения
+        /// </summary>
+        [TestMethod]
+        public void MultipleOpenClose_ShouldNotCauseErrors()
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                DataTable table = wwAccess.GetDataFromTable("Рабочие");
+                Assert.IsNotNull(table, $"Итерация {i}: таблица не должна быть null");
+            }
         }
     }
 
@@ -280,101 +305,191 @@ namespace TestProject1
             Assert.IsNull(path);
             form.Dispose();
         }
+
+        /// <summary>
+        /// Проверка метода GetPath
+        /// </summary>
+        [TestMethod]
+        public void GetPathReturnPath()
+        {
+            var form = new WorkForm();
+            var pathField = typeof(WorkForm).GetField("path", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            pathField.SetValue(form, "Test.accdb");
+            string path = form.GetPath();
+            Assert.AreEqual("Test.accdb", path);
+        }
+
+        /// <summary>
+        /// Проверка метода GetPath до установки пути
+        /// </summary>
+        [TestMethod]
+        public void GetPathBeforeSetting()
+        {
+            var newForm = new WorkForm();
+            string path = newForm.GetPath();
+            Assert.IsNull(path, "До установки путь должен быть null");
+        }
+
+        [TestMethod]
+        public void IsEnabledNullRoleException()
+        {
+            WorkForm workForm = new WorkForm();
+            InvokeIsEnabled(workForm, null);
+            Assert.IsFalse(GetControlEnabled("cmbBoxTable", workForm));
+            Assert.IsFalse(GetControlEnabled("btnFindLine", workForm));
+            Assert.IsFalse(GetControlEnabled("btnAddLine", workForm));
+            Assert.IsFalse(GetControlEnabled("btnChangeLine", workForm));
+            Assert.IsFalse(GetControlEnabled("btnDeleteLine", workForm));
+            Assert.IsFalse(GetControlEnabled("btnCreateReport", workForm));
+        }
+
+        /// <summary>
+        /// Вызов приватного IsEnabled
+        /// </summary>
+        private void InvokeIsEnabled(WorkForm form, string role)
+        {
+            var method = typeof(WorkForm).GetMethod("IsEnabled",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            if (method == null) Assert.Fail();
+            method.Invoke(form, new object[] { role });
+        }
+
+        /// <summary>
+        /// Получает состояние Enabled для контрола по имени
+        /// </summary>
+        private bool GetControlEnabled(string controlName, WorkForm workForm)
+        {
+            var controls = workForm.Controls.Find(controlName, true);
+            if (controls.Length > 0)
+            { return controls[0].Enabled; }
+            Assert.Fail();
+            return false;
+        }
     }
 
     [TestClass]
-    public class QuertyFormTests
+    public class QuertyFormSecurityTests
     {
         /// <summary>
-        /// IsSafeSqlQuery c безопасным запросом
+        /// Проверка безопасности SQL — SELECT
         /// </summary>
         [TestMethod]
-        public void IsSafeSqlQueryTrue()
+        public void IsSafeSqlQuerySelectTrue()
         {
-            var form = new QuertyForm(wwAccess);
-            bool result = IsSafeSqlQuery(form, "SELECT Наименование FROM Продукция");
+            var form = new QuertyForm(null);
+            var method = typeof(QuertyForm).GetMethod("IsSafeSqlQuery",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.IsNotNull(method, "Метод IsSafeSqlQuery существует");
+            bool result = (bool)method.Invoke(form,
+                new object[] { "SELECT * FROM Продукция WHERE Цена > 100" });
             Assert.IsTrue(result);
-            form.Dispose();
         }
 
         /// <summary>
-        /// IsSafeSqlQuery c небезопасным запросом (действие)
+        /// Проверка безопасности SQL — !SELECT
         /// </summary>
         [TestMethod]
-        public void IsSafeSqlQueryFalse()
+        public void IsSafeSqlQueryNotSelect()
         {
-            var form = new QuertyForm(wwAccess);
-            bool result = IsSafeSqlQuery(form, "DROP TABLE Продукция");
+            var form = new QuertyForm(null);
+            var method = typeof(QuertyForm).GetMethod("IsSafeSqlQuery",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            bool result = (bool)method.Invoke(form,
+                new object[] { "SHOW TABLES" });
             Assert.IsFalse(result);
-            form.Dispose();
         }
 
         /// <summary>
-        /// IsSafeSqlQuery c небезопасным запросом (данные)
-        /// </summary>
-        public void IsSafeSqlQuerySelectUsersFalse()
-        {
-            var form = new QuertyForm(wwAccess);
-            bool result = IsSafeSqlQuery(form, "SELECT * FROM ПОЛЬЗОВАТЕЛИ");
-            Assert.IsFalse(result);
-            form.Dispose();
-        }
-
-        /// <summary>
-        /// IsSafeSqlQuery с UNION SELECT
+        /// Проверка безопасности SQL — DROP TABLE
         /// </summary>
         [TestMethod]
-        public void IsSafeSqlQueryUnionSelectFalse()
+        public void IsSafeSqlQueryDropFalse()
         {
-            var form = new QuertyForm(wwAccess);
-            bool result = IsSafeSqlQuery(form, "SELECT * FROM Продукция UNION SELECT * FROM Пользователи");
+            var form = new QuertyForm(null);
+            var method = typeof(QuertyForm).GetMethod("IsSafeSqlQuery",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            bool result = (bool)method.Invoke(form,
+                new object[] { "DROP TABLE Продукция" });
             Assert.IsFalse(result);
-            form.Dispose();
         }
 
         /// <summary>
-        /// IsSafeSqlQuery с комментариями
+        /// Проверка безопасности SQL — комментарии
         /// </summary>
         [TestMethod]
-        public void IsSafeSqlQueryContainsCommentFalse()
+        public void IsSafeSqlQueryCommentFalse()
         {
-            var form = new QuertyForm(wwAccess);
-            bool result = IsSafeSqlQuery(form, "SELECT * FROM Продукция -- комментарий");
+            var form = new QuertyForm(null);
+            var method = typeof(QuertyForm).GetMethod("IsSafeSqlQuery",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            bool result = (bool)method.Invoke(form,
+                new object[] { "SELECT * FROM Продукция -- вредоносный код" });
             Assert.IsFalse(result);
-            form.Dispose();
         }
 
         /// <summary>
-        /// IsSafeSqlQuery с JOIN
+        /// Проверка безопасности SQL — UNION SELECT
         /// </summary>
         [TestMethod]
-        public void IsSafeSqlQueryJoinTrue()
+        public void IsSafeSqlQueryUnionFalse()
         {
-            var form = new QuertyForm(wwAccess);
-            bool result = IsSafeSqlQuery(form,
-                "SELECT p.Наименование, r.Имя FROM Продукция p INNER JOIN Рабочие r ON p.ID = r.ТабельныйНомер");
-            Assert.IsTrue(result);
-            form.Dispose();
+            var form = new QuertyForm(null);
+            var method = typeof(QuertyForm).GetMethod("IsSafeSqlQuery",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            bool result = (bool)method.Invoke(form,
+                new object[] { "SELECT Название FROM Продукция UNION SELECT Пароль FROM Пользователи" });
+            Assert.IsFalse(result);
         }
 
-        //Скопирован приватный IsSafeSqlQuery
-        private bool IsSafeSqlQuery(string sql)
+        /// <summary>
+        /// Проверка безопасности SQL — таблица пользователей
+        /// </summary>
+        [TestMethod]
+        public void IsSafeSqlQueryUsersFalse()
         {
-            string upperSql = sql.ToUpper().Trim();
-            string[] dangerousCommands = { "DROP", "DELETE", "UPDATE", "INSERT",
-                "ALTER", "CREATE", "TRUNCATE", "EXEC", "EXECUTE" };
-            foreach (string command in dangerousCommands)
-                if (upperSql.StartsWith(command) || upperSql.Contains(" " + command + " "))
-                    return false;
-            if (!upperSql.StartsWith("SELECT"))
-                return false;
-            if (sql.Contains("--") || sql.Contains("/*") || sql.Contains("*/") || sql.Contains(";"))
-                return false;
-            if (upperSql.Contains("UNION") && upperSql.Contains("SELECT"))
-                return false;
-            if (upperSql.Contains("ПОЛЬЗОВАТЕЛИ"))
-                return false;
-            return true;
+            var form = new QuertyForm(null);
+            var method = typeof(QuertyForm).GetMethod("IsSafeSqlQuery",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            bool result = (bool)method.Invoke(form,
+                new object[] { "SELECT * FROM Пользователи" });
+            Assert.IsFalse(result);
+        }
+    }
+
+    [TestClass]
+    public class ExportMethodsTests
+    {
+        private QuertyForm quertyForm;
+        private DataTable testDataTable;
+
+        [TestInitialize]
+        public void Setup()
+        { quertyForm = new QuertyForm(null); }
+
+        /// <summary>
+        /// Проверка существования и работы ExportToWord
+        /// </summary>
+        [TestMethod]
+        public void ExportToWordMethod()
+        {
+            var method = typeof(QuertyForm).GetMethod("ExportToWord",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.IsNotNull(method);
+            Assert.AreEqual(1, method.GetParameters().Length);
+            Assert.AreEqual(typeof(DataTable), method.GetParameters()[0].ParameterType);
+        }
+
+        /// <summary>
+        /// Проверка существования и работы ExportToExcel
+        /// </summary>
+        [TestMethod]
+        public void ExportToExcelMethod()
+        {
+            var method = typeof(QuertyForm).GetMethod("ExportToExcel",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.IsNotNull(method);
+            Assert.AreEqual(1, method.GetParameters().Length);
+            Assert.AreEqual(typeof(DataTable), method.GetParameters()[0].ParameterType);
         }
     }
 

@@ -1,0 +1,20 @@
+[
+  {
+    "Name": "Запуск проекта",
+    "Projects": [
+      {
+        "Path": "ProductRelase\\ProductRelase.csproj",
+        "Action": "Start"
+      }
+    ]
+  },
+  {
+    "Name": "Запуск тестов",
+    "Projects": [
+      {
+        "Path": "TestProject1\\TestProject1.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]
